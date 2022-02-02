@@ -8,6 +8,8 @@ use App\Entity\OrderDetails;
 use App\Form\OrderType;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
+use Stripe\Checkout\Session;
+use Stripe\Stripe;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -74,6 +76,9 @@ class OrderController extends AbstractController
             
             //Enregistrer ma commande Order()
             $order = new Order();
+
+            $reference = $date->format('dmY'). '-'.uniqid();
+            $order->setReference($reference);
             $order->setUser($this->getUser());
             $order->setCreatedAt($date);
             $order->setCarrierName($carriers->getName());
@@ -81,7 +86,6 @@ class OrderController extends AbstractController
             $order->setDelivery($delivery_content);
             $order->setIsPaid(0);
 
-            // dd($order);
             
             $this->entityManager->persist($order);
             
@@ -93,16 +97,18 @@ class OrderController extends AbstractController
                 $orderDetails->setQuantity($product['quantity']);
                 $orderDetails->setPrice($product['product']->getprice());
                 $orderDetails->setTotal($product['product']->getPrice() * $product['quantity']);
-                
+            
                 $this->entityManager->persist($orderDetails);
             }
-
             $this->entityManager->flush(); 
+
 
             return $this->render('order/add.html.twig', [
                 'cart' => $cart->getFull(),
                 'carrier' => $carriers,
-                'delivery' => $delivery_content
+                'delivery' => $delivery_content,
+                'reference' => $order->getReference()
+
         ]);
     }
             return $this->redirectToRoute('cart');
